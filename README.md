@@ -97,7 +97,7 @@ covid-vaccination-dashboard/
 - **Langue** : Sélection Français/English dans les paramètres
 - **Sélection dynamique** : Choix des indicateurs et des dimensions d'analyse
 
-## 📊 Données
+## Données
 
 Les données proviennent de **Santé Publique France** via la plateforme [data.gouv.fr](https://data.gouv.fr/).
 
@@ -135,7 +135,7 @@ Les données proviennent de **Santé Publique France** via la plateforme [data.g
 - Interface responsive et multilingue
 - Données et méthodologie documentées
 
-## 👥 Auteurs
+## Auteurs
 
 - **Nika Zarubina** - Auteur principal
   - [LinkedIn](https://www.linkedin.com/in/nika-zarubina-b5786593)
