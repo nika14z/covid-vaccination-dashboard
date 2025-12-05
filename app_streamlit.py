@@ -26,29 +26,45 @@ st.set_page_config(
 def inject_custom_css(dark_mode: bool):
     """Injecte le CSS pour le thème et supprime la barre blanche."""
     
+    # Couleurs dynamiques
     bg_color = "#0E1117" if dark_mode else "#FFFFFF"
     text_color = "#FAFAFA" if dark_mode else "#333333"
     card_bg = "rgba(255, 255, 255, 0.05)" if dark_mode else "rgba(0, 0, 0, 0.05)"
     sidebar_bg = "#262730" if dark_mode else "#F8F9FA"
 
+    # CSS Global
     css = f"""
     <style>
+        /* SUPPRESSION BARRE BLANCHE & HEADER */
         div[data-testid="stDecoration"] {{ display: none; }}
         .block-container {{ padding-top: 1rem !important; padding-bottom: 2rem !important; margin-top: 0 !important; }}
         header[data-testid="stHeader"] {{ background-color: transparent !important; z-index: 1; }}
 
+        /* THEME GLOBAL */
         .stApp {{ background-color: {bg_color}; color: {text_color}; }}
         section[data-testid="stSidebar"] {{ background-color: {sidebar_bg}; }}
         
-        h1, h2, h3, p, li, span, div {{ font-family: 'Segoe UI', sans-serif; color: {text_color}; }}
+        /* TEXTES */
+        h1, h2, h3, p, li, span, div {{
+            font-family: 'Segoe UI', sans-serif;
+            color: {text_color};
+        }}
         
+        /* SIDEBAR MINI */
         .sidebar-min-author {{ font-size: 1rem; font-weight: 600; color: #3a8ee6 !important; margin-bottom: 0.1rem; }}
         .sidebar-min-role {{ font-size: 0.92rem; color: #3a8ee6 !important; margin-bottom: 0.5rem; }}
         .sidebar-min-title {{ font-size: 1.05rem; font-weight: 700; color: #3a5fc8 !important; margin-top: 0.7rem; }}
         .sidebar-min-sep {{ border-top: 1px solid #e0e0e0; margin: 0.7rem 0; }}
+        
+        /* INSIGHT BOX */
+        .insight-box {{
+            padding: 15px; border-radius: 5px; margin-bottom: 20px;
+            border-left: 5px solid #F39C12; background-color: rgba(243, 156, 18, 0.1);
+        }}
     </style>
     """
     st.markdown(css, unsafe_allow_html=True)
+    
     if dark_mode: alt.themes.enable("dark")
     else: alt.themes.enable("default")
 
@@ -57,8 +73,7 @@ def inject_custom_css(dark_mode: bool):
 # ============================================================================
 URL_GEOJSON = "https://raw.githubusercontent.com/gregoiredavid/france-geojson/master/departements-version-simplifiee.geojson"
 
-# --- CORRECTION DES CHEMINS ICI ---
-# J'ai ajouté "data/" devant. Si ton dossier est "Data", mets "Data/".
+# --- FICHIERS DANS LE DOSSIER DATA ---
 FILES = {
     "dep_age": "data/vacsi-tot-a-dep-2023-07-13-15h50.csv",
     "dep_sex": "data/vacsi-tot-s-dep-2023-07-13-15h51.csv",
@@ -93,6 +108,7 @@ TRANSLATIONS = {
         'intro_title': "Vaccination COVID-19 en France",
         'intro_subtitle': "Analyse comparative de la couverture vaccinale française par territoire et démographie",
         
+        # TEXTES COMPLETS RESTAURÉS
         'tab_narrative': "Analyse et Synthèse",
         'tab_data': "Données et Méthodologie",
         'tab_quality': "Qualité",
@@ -104,9 +120,11 @@ TRANSLATIONS = {
         ### Structure de l'Analyse
         Ce tableau de bord décompose cette question en deux dimensions complémentaires :
         
-        **Dimension 1 : Variations Territoriales** Certains départements ont-ils bénéficié d'une meilleure couverture que d'autres ? Existe-t-il des patterns régionaux ou une corrélation avec la densité de population ?
+        **Dimension 1 : Variations Territoriales**
+        Certains départements ont-ils bénéficié d'une meilleure couverture que d'autres ? Existe-t-il des patterns régionaux ou une corrélation avec la densité de population ?
         
-        **Dimension 2 : Variations Démographiques** Comment la vaccination a-t-elle progressé selon l'âge et le sexe ? Quels groupes présentent les taux d'adhésion les plus élevés ou les plus faibles ?
+        **Dimension 2 : Variations Démographiques**
+        Comment la vaccination a-t-elle progressé selon l'âge et le sexe ? Quels groupes présentent les taux d'adhésion les plus élevés ou les plus faibles ?
 
         ### Contexte Temporel
         * **Janvier 2021 - Juin 2021** : Phase initiale (Doses 1 & 2, ciblage prioritaires)
@@ -240,7 +258,7 @@ def fix_dep_code(c: any) -> str:
 
 @st.cache_data
 def load_dep_data(filepath):
-    # Debug pour afficher le chemin si erreur
+    # Gestion des erreurs de fichier
     if not os.path.exists(filepath):
         st.error(f"Fichier introuvable : `{filepath}`. Le dossier 'data' est-il bien sur GitHub ?")
         return None, []
@@ -290,8 +308,23 @@ def load_sex_data(filepath):
         data = data[data['sexe'].isin(['1', '2'])]
         data['sexe'] = data['sexe'].map({'1': 'Homme', '2': 'Femme'})
         
-        map_c = {'Dose 1': ['n_tot_dose1'], 'Dose 2': ['n_tot_dose2'], 'Rappel 1': ['n_tot_rappel'], 'Rappel 2': ['n_tot_2_rappel']}
-        map_r = {'Dose 1': ['couv_tot_dose1'], 'Dose 2': ['couv_tot_complet'], 'Rappel 1': ['couv_tot_rappel'], 'Rappel 2': ['couv_tot_2_rappel']}
+        # --- MAPPING COMPLET ET CORRIGÉ ---
+        map_c = {
+            'Dose 1': ['n_tot_dose1'], 
+            'Dose 2': ['n_tot_dose2', 'n_tot_complet'], 
+            'Rappel 1': ['n_tot_rappel'], 
+            'Rappel 2': ['n_tot_2_rappel'],
+            'Rappel 3': ['n_tot_3_rappel'],
+            'Rappel Bivalent': ['n_tot_rappel_biv']
+        }
+        map_r = {
+            'Dose 1': ['couv_tot_dose1'], 
+            'Dose 2': ['couv_tot_complet'], 
+            'Rappel 1': ['couv_tot_rappel'], 
+            'Rappel 2': ['couv_tot_2_rappel'],
+            'Rappel 3': ['couv_tot_3_rappel'], 
+            'Rappel Bivalent': ['couv_tot_rappel_biv']
+        }
         
         cols, rename = ['dep', 'sexe'], {'dep': 'Departement', 'sexe': 'Sexe'}
         found_c, found_r = {}, {}
@@ -323,11 +356,12 @@ def page_introduction(df_dep, dict_fra, cols, lang):
         st.subheader(t['kpi_title'])
         items = list(dict_fra.items())
         
-        # CORRECTIF BUG 1: kpi_cols au lieu de cols
+        # CORRECTIF VARIABLE
         kpi_cols = st.columns(3)
         colors_list = ["#667eea", "#764ba2", "#f093fb", "#2ecc71", "#e67e22", "#e74c3c", "#3498db"]
         
         for idx, (l, v) in enumerate(items):
+            # Boucle infinie sur les colonnes et couleurs
             with kpi_cols[idx % 3]:
                 if l == "Rappel Biv.": l = "Rappel Bivalent"
                 color = colors_list[idx % len(colors_list)]
@@ -343,7 +377,7 @@ def page_introduction(df_dep, dict_fra, cols, lang):
     with t1: st.markdown(t['intro_narrative_text'])
     with t2:
         st.info(t['intro_data_text'])
-        # cols est bien la liste ici
+        # cols est ici bien la liste de données
         st.markdown(f"**Variables:** {', '.join(cols)}")
     with t3: st.warning(t['dq_limitations']); st.markdown(t['dq_source']); st.markdown(t['dq_license'])
 
@@ -432,7 +466,7 @@ def page_demo(df_age, df_sex, cols, lang):
         nat = df.groupby('Classe dAge')[[dose, 'Population']].sum().reset_index()
         nat['R'] = (nat[dose] / nat['Population'] * 100).clip(upper=100)
         
-        # CORRECTIF BUG 2: ALTAIR (background à la fin)
+        # FIX ALTAIR LAYER : Properties a la fin
         box = alt.Chart(df).mark_boxplot(extent='min-max', color=color).encode(x=alt.X('Classe dAge', sort=sort_order), y=alt.Y(col_taux))
         tick = alt.Chart(nat).mark_tick(color=COLORS['avg_line'], thickness=3, size=40).encode(x=alt.X('Classe dAge', sort=sort_order), y='R')
         
@@ -441,38 +475,43 @@ def page_demo(df_age, df_sex, cols, lang):
         st.altair_chart(final_chart, use_container_width=True)
         
     elif mode == t['demo_type_sex']:
-        if df_sex is None: st.error("Données Sexe non disponibles")
-        else:
-            nat = df_sex.groupby('Sexe')[[dose, 'Population']].sum().reset_index()
-            nat['R'] = (nat[dose] / nat['Population'] * 100).clip(upper=100)
-            bar = alt.Chart(nat).mark_bar().encode(
-                x=alt.X('Sexe', title=t['axis_sex']), y=alt.Y('R', title=t['axis_rate']),
-                color=alt.Color('Sexe', scale=alt.Scale(range=[COLORS['male'], COLORS['female']])),
-                tooltip=['Sexe', alt.Tooltip('R', format='.1f')]
-            ).properties(height=300, background=chart_bg)
-            
-            c1, c2 = st.columns([1, 2])
-            with c1: st.altair_chart(bar, use_container_width=True)
-            with c2:
-                st.markdown(f"#### {t['demo_boxplot_title']}")
-                
-                # CORRECTIF BUG 2: ALTAIR
-                base = alt.Chart(df_sex).encode(x=alt.X('Sexe', title=t['axis_sex']))
-                box = base.mark_boxplot(extent='min-max', color=color).encode(y=alt.Y(col_taux, title=t['axis_rate']))
-                
-                sel = base.mark_bar(opacity=0).encode(
-                    y=alt.Y(col_taux, aggregate='max'), y2=alt.value(0),
-                    tooltip=[
-                        alt.Tooltip('Sexe', title=t['axis_sex']),
-                        alt.Tooltip(col_taux, aggregate='max', title=t['tooltip_max']),
-                        alt.Tooltip(col_taux, aggregate='min', title=t['tooltip_min']),
-                        alt.Tooltip(col_taux, aggregate='median', title=t['tooltip_med'])
-                    ]
-                )
-                
-                final_chart = (box + sel).properties(background=chart_bg)
-                if not dark: final_chart = final_chart.configure_axis(labelColor='#333', titleColor='#333')
-                st.altair_chart(final_chart, use_container_width=True)
+        if df_sex is None: st.error("Données Sexe non disponibles"); return
+        
+        # FIX KEYERROR : Verification si la colonne existe
+        if dose not in df_sex.columns:
+            st.warning(f"⚠️ Données non disponibles pour '{dose}' dans le fichier par sexe.")
+            return
+
+        nat = df_sex.groupby('Sexe')[[dose, 'Population']].sum().reset_index()
+        nat['R'] = (nat[dose] / nat['Population'] * 100).clip(upper=100)
+        bar = alt.Chart(nat).mark_bar().encode(
+            x=alt.X('Sexe', title=t['axis_sex']), y=alt.Y('R', title=t['axis_rate']),
+            color=alt.Color('Sexe', scale=alt.Scale(range=[COLORS['male'], COLORS['female']])),
+            tooltip=['Sexe', alt.Tooltip('R', format='.1f')]
+        ).properties(height=300, background=chart_bg)
+        
+        if not dark:
+            bar = bar.configure_axis(labelColor='#333', titleColor='#333').configure_legend(labelColor='#333', titleColor='#333')
+        
+        c1, c2 = st.columns([1, 2])
+        with c1: st.altair_chart(bar, use_container_width=True)
+        with c2:
+            st.markdown(f"#### {t['demo_boxplot_title']}")
+            base = alt.Chart(df_sex).encode(x='Sexe')
+            box = base.mark_boxplot(extent='min-max', color=color).encode(y=alt.Y(col_taux, title=t['axis_rate']))
+            sel = base.mark_bar(opacity=0).encode(
+                y=alt.Y(col_taux, aggregate='max'), y2=alt.value(0),
+                tooltip=[
+                    alt.Tooltip('Sexe', title=t['axis_sex']),
+                    alt.Tooltip(col_taux, aggregate='max', title=t['tooltip_max']),
+                    alt.Tooltip(col_taux, aggregate='min', title=t['tooltip_min']),
+                    alt.Tooltip(col_taux, aggregate='median', title=t['tooltip_med'])
+                ]
+            )
+            # FIX ALTAIR LAYER
+            final_chart = (box + sel).properties(background=chart_bg)
+            if not dark: final_chart = final_chart.configure_axis(labelColor='#333', titleColor='#333')
+            st.altair_chart(final_chart, use_container_width=True)
     st.caption(t['cap_note'])
 
 # ==============================================================================
@@ -480,7 +519,6 @@ def page_demo(df_age, df_sex, cols, lang):
 # ==============================================================================
 def main():
     with st.sidebar:
-        st.markdown("""<style>.sidebar-min-author{font-size:1rem;font-weight:600;color:#3a8ee6;margin-bottom:0.1rem}.sidebar-min-role{font-size:0.92rem;color:#3a8ee6;margin-bottom:0.5rem}.sidebar-min-title{font-size:1.05rem;font-weight:700;color:#3a5fc8;margin-top:0.7rem}.sidebar-min-sep{border-top:1px solid #e0e0e0;margin:0.7rem 0}</style>""", unsafe_allow_html=True)
         st.header("Paramètres")
         lang_select = st.radio("Langue", ["Français", "English"], key="lang")
         dark_mode = st.toggle("Mode Nuit", value=True, key="dark")
