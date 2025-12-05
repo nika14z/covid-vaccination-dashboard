@@ -1,6 +1,6 @@
-# Dossier Données / Data Folder
+# Données / Data
 
-## 📥 Instructions pour télécharger les données
+## Instructions pour télécharger les données
 
 Les fichiers de données doivent être téléchargés depuis [data.gouv.fr](https://data.gouv.fr/) et placés dans ce dossier.
 
@@ -23,7 +23,7 @@ Les fichiers de données doivent être téléchargés depuis [data.gouv.fr](http
 
 ---
 
-## 📥 Instructions for downloading data
+## Instructions for downloading data
 
 Data files must be downloaded from [data.gouv.fr](https://data.gouv.fr/) and placed in this folder.
 

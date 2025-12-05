@@ -4,11 +4,11 @@ Un tableau de bord interactif d'analyse de la couverture vaccinale contre la COV
 
 **[English version below](#english-version)**
 
-## 🎯 Objectif
+## Objectif
 
 Ce projet analyse l'équité de l'accès à la vaccination contre la COVID-19 en France en examinant les disparités géographiques et démographiques de la couverture vaccinale.
 
-## 📊 Caractéristiques principales
+## Caractéristiques principales
 
 - **Analyse Territoriale** : Visualisation géographique des taux de couverture par département
 - **Analyse Démographique** : Comparaison des taux selon l'âge et le sexe
@@ -16,7 +16,7 @@ Ce projet analyse l'équité de l'accès à la vaccination contre la COVID-19 en
 - **Multilingue** : Interface disponible en français et anglais
 - **Data Storytelling** : Narration professionnelle des données
 
-## 🚀 Démarrage rapide
+## Démarrage rapide
 
 ### Prérequis
 
@@ -60,7 +60,7 @@ Ce projet analyse l'équité de l'accès à la vaccination contre la COVID-19 en
 
 L'application s'ouvrira dans votre navigateur à `http://localhost:8501`
 
-## 📁 Structure du projet
+## Structure du projet
 
 ```
 covid-vaccination-dashboard/
@@ -113,14 +113,14 @@ Les données proviennent de **Santé Publique France** via la plateforme [data.g
 - Taux de couverture (%)
 - Ventilation par groupe d'âge et sexe
 
-## 🛠️ Technologies utilisées
+## Technologies utilisées
 
 - **[Streamlit](https://streamlit.io/)** - Framework web pour data apps
 - **[Altair](https://altair-viz.github.io/)** - Visualisation de données déclarative
 - **[Pandas](https://pandas.pydata.org/)** - Manipulation et analyse de données
 - **[NumPy](https://numpy.org/)** - Calculs numériques
 
-## 📈 Visualisations
+## Visualisations
 
 - Cartes choroplèthes (Altair)
 - Graphiques en barres et listes de classement
@@ -128,12 +128,12 @@ Les données proviennent de **Santé Publique France** via la plateforme [data.g
 - Diagrammes en camembert pour la composition démographique
 - Taux de couverture empilés avec pourcentages
 
-## 🌐 Accessibilité
+##  Accessibilité
 
-- ✅ Contraste suffisant en modes clair et sombre
-- ✅ Labels clairs et lisibles sur tous les graphiques
-- ✅ Interface responsive et multilingue
-- ✅ Données et méthodologie documentées
+- Contraste suffisant en modes clair et sombre
+- Labels clairs et lisibles sur tous les graphiques
+- Interface responsive et multilingue
+- Données et méthodologie documentées
 
 ## 👥 Auteurs
 
@@ -143,12 +143,12 @@ Les données proviennent de **Santé Publique France** via la plateforme [data.g
 - **Mano Joseph Mathew** - Encadrant
   - [LinkedIn](https://www.linkedin.com/in/manomathew)
 
-## 📝 Licence
+## Licence
 
 Ce projet est fourni à titre de portfolio/exemple de visualisation de données.
 Les données sont sous licence Ouverte v2.0.
 
-## 🐛 Problèmes et suggestions
+## Problèmes et suggestions
 
 Pour signaler un bug ou suggérer une amélioration, veuillez ouvrir une issue dans le repository GitHub.
 
@@ -160,11 +160,11 @@ Pour signaler un bug ou suggérer une amélioration, veuillez ouvrir une issue d
 
 An interactive dashboard analyzing COVID-19 vaccination coverage in France, with comparative analysis by territory and demographics.
 
-## 🎯 Objective
+## Objective
 
 This project analyzes the equity of access to COVID-19 vaccination in France by examining geographic and demographic disparities in vaccination coverage.
 
-## 🚀 Quick Start
+## Quick Start
 
 ### Requirements
 
@@ -208,7 +208,7 @@ This project analyzes the equity of access to COVID-19 vaccination in France by 
 
 The app will open in your browser at `http://localhost:8501`
 
-## 📊 Key Features
+## Key Features
 
 ### Main Pages
 
@@ -227,7 +227,7 @@ The app will open in your browser at `http://localhost:8501`
    - Gender comparison with boxplots
    - Distribution analysis
 
-## 🛠️ Technologies
+## Technologies
 
 - **[Streamlit](https://streamlit.io/)** - Web framework for data apps
 - **[Altair](https://altair-viz.github.io/)** - Declarative data visualization
