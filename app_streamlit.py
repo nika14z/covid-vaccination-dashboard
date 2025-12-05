@@ -1,18 +1,17 @@
 """Application Streamlit - Tableau de bord Vaccination COVID-19 France.
 Auteur : Nika ZARUBINA
 Date : 2023
-Description : Data Storytelling sur la vaccination (Pattern: Comparaison Régions/Groupes).
+Description : Data Storytelling sur la vaccination.
 """
 
 import streamlit as st
 import pandas as pd
 import numpy as np
 import altair as alt
-from typing import Dict
-
+import os
 
 # ============================================================================
-# Configuration
+# 1. Configuration (Doit être la toute première ligne)
 # ============================================================================
 st.set_page_config(
     page_title="COVID-19 Tracker France",
@@ -21,39 +20,82 @@ st.set_page_config(
     initial_sidebar_state="expanded",
 )
 
+# ============================================================================
+# 2. Gestion du Style (CSS)
+# ============================================================================
+def inject_custom_css(dark_mode: bool):
+    """Injecte le CSS pour le thème et supprime la barre blanche."""
+    
+    # Couleurs dynamiques
+    bg_color = "#0E1117" if dark_mode else "#FFFFFF"
+    text_color = "#FAFAFA" if dark_mode else "#333333"
+    card_bg = "rgba(255, 255, 255, 0.05)" if dark_mode else "rgba(0, 0, 0, 0.05)"
+    sidebar_bg = "#262730" if dark_mode else "#F8F9FA"
 
-# --- Constants ---
+    # CSS Global
+    css = f"""
+    <style>
+        /* SUPPRESSION BARRE BLANCHE & HEADER */
+        div[data-testid="stDecoration"] {{
+            display: none;
+        }}
+        .block-container {{
+            padding-top: 1rem !important;
+            padding-bottom: 2rem !important;
+            margin-top: 0 !important;
+        }}
+        header[data-testid="stHeader"] {{
+            background-color: transparent !important;
+            z-index: 1;
+        }}
+
+        /* THEME GLOBAL */
+        .stApp {{ background-color: {bg_color}; color: {text_color}; }}
+        section[data-testid="stSidebar"] {{ background-color: {sidebar_bg}; }}
+        
+        /* TEXTES */
+        h1, h2, h3, p, li, span, div {{
+            font-family: 'Segoe UI', sans-serif;
+            color: {text_color};
+        }}
+        
+        /* SIDEBAR MINI */
+        .sidebar-min-author {{ font-size: 1rem; font-weight: 600; color: #3a8ee6 !important; margin-bottom: 0.1rem; }}
+        .sidebar-min-role {{ font-size: 0.92rem; color: #3a8ee6 !important; margin-bottom: 0.5rem; }}
+        .sidebar-min-title {{ font-size: 1.05rem; font-weight: 700; color: #3a5fc8 !important; margin-top: 0.7rem; }}
+        .sidebar-min-sep {{ border-top: 1px solid #e0e0e0; margin: 0.7rem 0; }}
+    </style>
+    """
+    st.markdown(css, unsafe_allow_html=True)
+    
+    if dark_mode: alt.themes.enable("dark")
+    else: alt.themes.enable("default")
+
+# ============================================================================
+# 3. Constantes & Mapping
+# ============================================================================
 URL_GEOJSON = "https://raw.githubusercontent.com/gregoiredavid/france-geojson/master/departements-version-simplifiee.geojson"
 FILES = {
     "dep_age": "vacsi-tot-a-dep-2023-07-13-15h50.csv",
     "dep_sex": "vacsi-tot-s-dep-2023-07-13-15h51.csv",
 }
 
-# Colors used across charts
 COLORS = {
-    "dose_primary": "#3182bd",
-    "dose_booster": "#31a354",
-    "male": "#2171b5",
-    "female": "#cb181d",
-    "avg_line": "#e67e22",
-    "gray_neutral": "#e0e0e0",
+    "dose_primary": "#3182bd", "dose_booster": "#31a354",
+    "male": "#2171b5", "female": "#cb181d",
+    "avg_line": "#e67e22", "gray_neutral": "#e0e0e0",
 }
 
-# Mapping des Âges (labels et ordre par défaut)
-AGE_LABELS = {
-    '0': '0-4 ans', '5': '5-9 ans', '10': '10-11 ans', '12': '12-17 ans',
-    '18': '18-24 ans', '25': '25-29 ans', '30': '30-39 ans', '40': '40-49 ans',
-    '50': '50-59 ans', '60': '60-64 ans', '65': '65-69 ans', '70': '70-74 ans',
-    '75': '75-79 ans', '80': '80 ans et +'
+AGE_MAPPING = {
+    0: 'Tous âges', 4: '0-4 ans', 9: '5-9 ans', 11: '10-11 ans', 17: '12-17 ans',
+    24: '18-24 ans', 29: '25-29 ans', 39: '30-39 ans', 49: '40-49 ans',
+    59: '50-59 ans', 64: '60-64 ans', 69: '65-69 ans', 74: '70-74 ans',
+    79: '75-79 ans', 80: '80 ans et +'
 }
-
-AGE_ORDER = ['0-4 ans', '5-9 ans', '10-11 ans', '12-17 ans', '18-24 ans', '25-29 ans',
+AGE_ORDER = ['Tous âges', '0-4 ans', '5-9 ans', '10-11 ans', '12-17 ans', '18-24 ans', '25-29 ans',
              '30-39 ans', '40-49 ans', '50-59 ans', '60-64 ans', '65-69 ans',
              '70-74 ans', '75-79 ans', '80 ans et +']
 
-
-
-# Dictionnaire de traduction & Textes Narratifs
 TRANSLATIONS = {
     'Français': {
         'nav_title': "Navigation",
@@ -66,7 +108,6 @@ TRANSLATIONS = {
         'intro_title': "Tableau de Bord Vaccination COVID-19",
         'intro_subtitle': "Analyse comparative de la couverture vaccinale par territoire et démographie",
         
-        # NARRATIVE : HOOK & CONTEXT
         'tab_narrative': "Analyse et Synthèse",
         'tab_data': "Données et Méthodologie",
         'tab_quality': "Qualité",
@@ -78,11 +119,9 @@ TRANSLATIONS = {
         ### Structure de l'Analyse
         Ce tableau de bord décompose cette question en deux dimensions complémentaires :
         
-        **Dimension 1 : Variations Territoriales**  
-        Certains départements ont-ils bénéficié d'une meilleure couverture que d'autres ? Existe-t-il des patterns régionaux ou une corrélation avec la densité de population ?
+        **Dimension 1 : Variations Territoriales** Certains départements ont-ils bénéficié d'une meilleure couverture que d'autres ? Existe-t-il des patterns régionaux ou une corrélation avec la densité de population ?
         
-        **Dimension 2 : Variations Démographiques**  
-        Comment la vaccination a-t-elle progressé selon l'âge et le sexe ? Quels groupes présentent les taux d'adhésion les plus élevés ou les plus faibles ?
+        **Dimension 2 : Variations Démographiques** Comment la vaccination a-t-elle progressé selon l'âge et le sexe ? Quels groupes présentent les taux d'adhésion les plus élevés ou les plus faibles ?
 
         ### Contexte Temporel
         * **Janvier 2021 - Juin 2021** : Phase initiale (Doses 1 & 2, ciblage prioritaires)
@@ -153,11 +192,9 @@ TRANSLATIONS = {
         ### Analysis Structure
         This dashboard addresses this question across two complementary dimensions:
         
-        **Dimension 1: Territorial Variations**  
-        Did certain departments achieve better coverage than others? Are there regional patterns or correlations with population density?
+        **Dimension 1: Territorial Variations** Did certain departments achieve better coverage than others? Are there regional patterns or correlations with population density?
         
-        **Dimension 2: Demographic Variations**  
-        How did vaccination progress according to age and gender? Which groups showed the highest or lowest uptake rates?
+        **Dimension 2: Demographic Variations** How did vaccination progress according to age and gender? Which groups showed the highest or lowest uptake rates?
 
         ### Temporal Context
         * **January 2021 - June 2021**: Initial phase (Doses 1 & 2, targeting priority groups)
@@ -209,70 +246,17 @@ TRANSLATIONS = {
 }
 
 # ==============================================================================
-# 2. UTILS
+# 4. Chargement des Données
 # ==============================================================================
-
 def fix_dep_code(c: any) -> str:
     c = str(c).strip()
     return "0" + c if len(c) == 1 else c
 
-def apply_theme_css(dark_mode: bool):
-    # CSS Custom pour les cartes KPI (Metrics)
-    metric_card_css = """
-<style>
-div[data-testid="stMetric"] {
-background-color: rgba(255, 255, 255, 0.05);
-border: 1px solid rgba(255, 255, 255, 0.1);
-padding: 10px;
-border-radius: 5px;
-text-align: center;
-}
-div[data-testid="stMetricLabel"] {
-font-size: 0.9em;
-opacity: 0.8;
-}
-div[data-testid="stMetricValue"] {
-font-size: 1.6em;
-font-weight: bold;
-color: #5DADE2;
-}
-/* Style pour les Insights */
-.insight-box {
-    padding: 15px;
-    border-radius: 5px;
-    margin-bottom: 20px;
-    border-left: 5px solid #F39C12;
-    background-color: rgba(243, 156, 18, 0.1);
-}
-</style>
-"""
-    if dark_mode:
-        alt.themes.enable("dark")
-        st.markdown("""<style>
-            .stApp { background-color: #0E1117; }
-            .stSidebar { background-color: #262730; }
-            h1, h2, h3 { color: #FAFAFA !important; font-family: 'Segoe UI', sans-serif; }
-            p, li, span, div { color: #E0E0E0; font-family: 'Segoe UI', sans-serif; }
-        </style>""" + metric_card_css, unsafe_allow_html=True)
-    else:
-        alt.themes.enable("default")
-        st.markdown("""
-        <style>
-            .stApp { background-color: #FFFFFF; }
-            .stSidebar { background-color: #F8F9FA; border-right: 1px solid #ddd;}
-            h1, h2, h3 { color: #111111 !important; font-family: 'Segoe UI', sans-serif; }
-            p, li, span, div { color: #333333; font-family: 'Segoe UI', sans-serif; }
-            .block-container { background: #fff !important; }
-                header[data-testid="stHeader"] { background: #fff !important; }
-        </style>
-        """ + metric_card_css.replace("#5DADE2", "#3182bd"), unsafe_allow_html=True)
-
-# ==============================================================================
-# 3. LOAD DATA
-# ==============================================================================
-
 @st.cache_data
 def load_dep_data(filepath):
+    if not os.path.exists(filepath):
+        st.error(f"Fichier introuvable: {filepath}")
+        return None, []
     try:
         data = pd.read_csv(filepath, delimiter=';', dtype={'dep': str})
         data.columns = data.columns.str.lower()
@@ -285,88 +269,67 @@ def load_dep_data(filepath):
         }
         
         cols_keep = ['dep', 'clage_vacsi', 'pop']
-        rename = {'dep': 'Departement', 'clage_vacsi': 'Classe dAge', 'pop': 'Population'}
+        rename = {'dep': 'Departement', 'clage_vacsi': 'CodeAge', 'pop': 'Population'}
         found = []
-        
         for n, opts in mapping.items():
             c = next((x for x in data.columns if x in opts), None)
             if c:
-                cols_keep.append(c)
-                rename[c] = n
-                found.append(n)
+                cols_keep.append(c); rename[c] = n; found.append(n)
                 
         data = data[cols_keep].rename(columns=rename)
         data['Departement'] = data['Departement'].apply(fix_dep_code)
         data['Population'] = data['Population'].replace(0, np.nan)
         
-        # NETTOYAGE ROBUSTE ET MAPPING DES AGES
-        data['Classe dAge'] = pd.to_numeric(data['Classe dAge'], errors='coerce').astype('Int64').astype(str)
-        data['Classe dAge'] = data['Classe dAge'].map(AGE_LABELS).fillna(data['Classe dAge'])
+        # MAPPING CORRIGÉ
+        data['CodeAge'] = pd.to_numeric(data['CodeAge'], errors='coerce').fillna(-1).astype(int)
+        data['Classe dAge'] = data['CodeAge'].map(AGE_MAPPING)
+        data = data.dropna(subset=['Classe dAge'])
         
         for c in found:
             data[f"Taux {c} (%)"] = (data[c] / data['Population'] * 100).clip(upper=100)
-            
         return data.replace([np.inf, np.nan], 0), found
-    except Exception as e: 
-        return None, []
+    except Exception as e:
+        st.error(f"Erreur Load Data: {e}"); return None, []
 
 @st.cache_data
 def load_sex_data(filepath):
+    if not os.path.exists(filepath): return None
     try:
         data = pd.read_csv(filepath, delimiter=';', dtype={'dep': str})
         data.columns = data.columns.str.lower()
         if 'jour' in data.columns: data = data[data['jour'] == data['jour'].max()]
         if 'sexe' not in data.columns: return None
-        
         data['sexe'] = data['sexe'].astype(str).str.replace('.0', '', regex=False)
         data = data[data['sexe'].isin(['1', '2'])]
         data['sexe'] = data['sexe'].map({'1': 'Homme', '2': 'Femme'})
         
-        map_c = {
-            'Dose 1': ['n_tot_dose1'], 'Dose 2': ['n_tot_dose2', 'n_tot_complet'],
-            'Rappel 1': ['n_tot_rappel'], 'Rappel 2': ['n_tot_2_rappel'],
-            'Rappel 3': ['n_tot_3_rappel'], 'Rappel Bivalent': ['n_tot_rappel_biv']
-        }
-        map_r = {
-            'Dose 1': ['couv_tot_dose1'], 'Dose 2': ['couv_tot_complet'],
-            'Rappel 1': ['couv_tot_rappel'], 'Rappel 2': ['couv_tot_2_rappel'],
-            'Rappel 3': ['couv_tot_3_rappel'], 'Rappel Bivalent': ['couv_tot_rappel_biv']
-        }
+        map_c = {'Dose 1': ['n_tot_dose1'], 'Dose 2': ['n_tot_dose2'], 'Rappel 1': ['n_tot_rappel'], 'Rappel 2': ['n_tot_2_rappel']}
+        map_r = {'Dose 1': ['couv_tot_dose1'], 'Dose 2': ['couv_tot_complet'], 'Rappel 1': ['couv_tot_rappel'], 'Rappel 2': ['couv_tot_2_rappel']}
         
         cols, rename = ['dep', 'sexe'], {'dep': 'Departement', 'sexe': 'Sexe'}
         found_c, found_r = {}, {}
-        
         for n, o in map_c.items():
             c = next((k for k in data.columns if k in o), None)
-            if c:
-                cols.append(c)
-                rename[c] = n
-                found_c[n] = n
+            if c: cols.append(c); rename[c] = n; found_c[n] = n
         for n, o in map_r.items():
             c = next((k for k in data.columns if k in o), None)
-            if c:
-                cols.append(c)
-                rename[c] = f"Taux {n} (%)"
-                found_r[n] = f"Taux {n} (%)"
+            if c: cols.append(c); rename[c] = f"Taux {n} (%)"; found_r[n] = f"Taux {n} (%)"
                 
         data = data[cols].rename(columns=rename)
         data['Departement'] = data['Departement'].apply(fix_dep_code)
-        
         if 'Dose 1' in found_c and 'Dose 1' in found_r:
             data['Population'] = np.where(data[found_r['Dose 1']] > 0, (data['Dose 1'] / data[found_r['Dose 1']]) * 100, 0).round().astype(int)
         else: data['Population'] = 1
-        
         return data.replace([np.inf, np.nan], 0)
     except: return None
 
 # ==============================================================================
-# 4. VUES (PAGES)
+# 5. Vues (AVEC LE DESIGN ORIGINAL RESTAURÉ)
 # ==============================================================================
-
 def page_introduction(df_dep, dict_fra, cols, lang):
     t = TRANSLATIONS[lang]
     
-    # Hero Section avec gradient
+    # RESTAURATION DU CSS SPÉCIFIQUE À LA PAGE D'ACCUEIL
     st.markdown("""
     <style>
         .hero-title {
@@ -380,100 +343,60 @@ def page_introduction(df_dep, dict_fra, cols, lang):
         }
         .hero-subtitle {
             font-size: 1.1rem;
-            color: #666;
+            color: #888888;
             font-style: italic;
             margin-bottom: 2rem;
         }
-        .kpi-card {
-            background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(102, 126, 234, 0.05) 100%);
-            border-left: 4px solid #667eea;
-            padding: 1.5rem;
-            border-radius: 8px;
-            margin-bottom: 1rem;
-        }
-        .kpi-label {
-            font-size: 0.9rem;
-            color: #666;
-            margin: 0;
-        }
-        .kpi-value {
-            font-size: 1.8rem;
-            font-weight: 700;
-            color: #667eea;
-            margin: 0.5rem 0 0 0;
-        }
     </style>
     """, unsafe_allow_html=True)
-    
+
     st.markdown(f"<h1 class='hero-title'>{t['intro_title']}</h1>", unsafe_allow_html=True)
     st.markdown(f"<p class='hero-subtitle'>{t['intro_subtitle']}</p>", unsafe_allow_html=True)
     
     if dict_fra:
         st.divider()
         st.subheader(t['kpi_title'])
-        
         items = list(dict_fra.items())
-        cols_display = st.columns(3)
         
+        kpi_cols = st.columns(3)
         colors = ["#667eea", "#764ba2", "#f093fb"]
-        for idx, (l, v) in enumerate(items):
-            col_idx = idx % 3
-            with cols_display[col_idx]:
-                if l == "Rappel Biv.": l = "Rappel Bivalent"
-                color = colors[col_idx]
-                
-                st.markdown(f"""
-                <div style='
-                    background: linear-gradient(135deg, {color}20 0%, {color}10 100%);
-                    border-left: 4px solid {color};
-                    padding: 1.5rem;
-                    border-radius: 8px;
-                    margin-bottom: 1rem;
-                '>
-                    <p style='font-size: 0.9rem; color: #666; margin: 0;'>{l}</p>
-                    <p style='font-size: 1.8rem; font-weight: 700; color: {color}; margin: 0.5rem 0 0 0;'>{int(v):,}</p>
-                </div>
-                """, unsafe_allow_html=True)
         
+        for idx, (l, v) in enumerate(items):
+            if idx < 3:
+                with kpi_cols[idx]:
+                    if l == "Rappel Biv.": l = "Rappel Bivalent"
+                    color = colors[idx % 3]
+                    st.markdown(f"""
+                    <div style='background: linear-gradient(135deg, {color}20 0%, {color}10 100%);
+                        border-left: 4px solid {color}; padding: 1.5rem; border-radius: 8px; margin-bottom: 1rem;'>
+                        <p style='font-size: 0.9rem; margin: 0; opacity: 0.8;'>{l}</p>
+                        <p style='font-size: 1.8rem; font-weight: 700; color: {color}; margin: 0.5rem 0 0 0;'>{int(v):,}</p>
+                    </div>""", unsafe_allow_html=True)
         st.divider()
     
-    # Tabs avec contenu
     t1, t2, t3 = st.tabs([t['tab_narrative'], t['tab_data'], t['tab_quality']])
-    
-    with t1:
-        st.markdown(t['intro_narrative_text'])
-    
+    with t1: st.markdown(t['intro_narrative_text'])
     with t2:
         st.info(t['intro_data_text'])
         st.markdown(f"**Variables:** {', '.join(cols)}")
-    
-    with t3:
-        st.warning(t['dq_limitations'])
-        st.markdown(t['dq_source'])
-        st.markdown(t['dq_license'])
+    with t3: st.warning(t['dq_limitations']); st.markdown(t['dq_source']); st.markdown(t['dq_license'])
 
 def page_geo(df, cols, lang):
     t = TRANSLATIONS[lang]
     st.title(t['geo_title'])
-    
-    # determine theme for charts
     dark = st.session_state.get('dark', True)
     chart_bg = '#0E1117' if dark else '#ffffff'
-    text_color = '#ffffff' if dark else '#111111'
-
-    # Storytelling Block
-    with st.container():
-        st.info(t['geo_insight'])
-        st.success(t['geo_implication'])
     
+    with st.container(): st.info(t['geo_insight']); st.success(t['geo_implication'])
     st.markdown(t['geo_desc'])
     
     c1, c2 = st.columns([1, 2])
     with c1: dose = st.radio(t['geo_choose_dose'], cols)
-    with c2: metric = st.radio("Métrique / Metric", ["Taux (%)" if lang=='Français' else "Rate (%)", "Total"])
-    
+    with c2: metric = st.radio("Métrique", ["Taux (%)", "Total"] if lang=='Français' else ["Rate (%)", "Total"])
     col_target = f"Taux {dose} (%)" if "Taux" in metric or "Rate" in metric else dose
+    
     df_viz = df[df['Classe dAge'] == 'Tous âges'].copy()
+    if df_viz.empty: st.error("Mapping 'Tous âges' vide."); return
     
     scheme = 'tealblues' if 'Rappel' in dose else 'yelloworangered'
     color_bar = COLORS['dose_booster'] if 'Rappel' in dose else COLORS['dose_primary']
@@ -481,27 +404,22 @@ def page_geo(df, cols, lang):
     geo = alt.Data(url=URL_GEOJSON, format=alt.DataFormat(property='features', type='json'))
     sel = alt.selection_point(fields=['properties.nom'], on='mouseover', empty='none')
     
-    map_c = alt.Chart(geo).mark_geoshape(stroke='white').encode(
+    map_c = alt.Chart(geo).mark_geoshape(stroke='white', strokeWidth=0.5).encode(
         color=alt.Color(f'{col_target}:Q', scale=alt.Scale(scheme=scheme), legend=alt.Legend(title=t['axis_rate'])),
         opacity=alt.condition(sel, alt.value(1), alt.value(0.7)),
         tooltip=['properties.nom:N', alt.Tooltip(f'{col_target}:Q', format=',.1f')]
     ).transform_lookup(lookup='properties.code', from_=alt.LookupData(df_viz, 'Departement', [col_target])).add_params(sel).properties(width=600, height=500, background=chart_bg).project(type='identity', reflectY=True)
     
-    # Configure legend labels for light mode on map
-    if not dark:
-        map_c = map_c.configure_legend(labelColor='#111111', titleColor='#111111')
-
     bar_c = alt.Chart(df_viz).mark_bar().encode(
-        x=alt.X(col_target, title=""),
-        y=alt.Y('Departement', sort='-x'),
+        x=alt.X(col_target, title=""), y=alt.Y('Departement', sort='-x'),
         color=alt.condition(alt.datum[col_target] >= df_viz[col_target].mean(), alt.value(color_bar), alt.value('#BDC3C7')),
         tooltip=[col_target]
     ).transform_window(rank='rank()', sort=[alt.SortField(col_target, order='descending')]).transform_filter(alt.datum.rank <= 20).properties(height=500, title=f"Top 20 ({dose})", background=chart_bg)
     
-    # Configure axis labels and title for light mode
     if not dark:
-        bar_c = bar_c.configure_title(color='#111111').configure_axis(labelColor='#111111', titleColor='#111111').configure_legend(labelColor='#111111', titleColor='#111111')
-
+        map_c = map_c.configure_legend(labelColor='#333', titleColor='#333')
+        bar_c = bar_c.configure_axis(labelColor='#333', titleColor='#333').configure_title(color='#333')
+    
     c_a, c_b = st.columns([1.5, 1])
     with c_a: st.altair_chart(map_c, use_container_width=True)
     with c_b: st.altair_chart(bar_c, use_container_width=True)
@@ -510,31 +428,24 @@ def page_demo(df_age, df_sex, cols, lang):
     t = TRANSLATIONS[lang]
     st.title(t['demo_title'])
     st.markdown(t['demo_desc'])
-
-    # theme for charts
     dark = st.session_state.get('dark', True)
     chart_bg = '#0E1117' if dark else '#ffffff'
-    text_color_name = 'white' if dark else 'black'  # CSS color names for Altair
+    txt_col = 'white' if dark else 'black'
     
     mode = st.radio(t['demo_type_label'], [t['demo_type_age'], t['demo_type_sex']], horizontal=True)
     st.markdown("---")
     
-    # Storytelling Block
     with st.container():
-        if mode == t['demo_type_age']:
-            st.info(t['demo_insight_age'])
-            st.success(t['demo_implication_age'])
-        else:
-            st.info(t['demo_insight_sex'])
-
+        if mode == t['demo_type_age']: st.info(t['demo_insight_age']); st.success(t['demo_implication_age'])
+        else: st.info(t['demo_insight_sex'])
+            
     dose = st.radio(t['demo_choose_dose'], cols, horizontal=True, key="d")
     col_taux = f"Taux {dose} (%)"
     color = COLORS['dose_booster'] if 'Rappel' in dose else COLORS['dose_primary']
     
     if mode == t['demo_type_age']:
         df = df_age[df_age['Classe dAge'] != 'Tous âges'].copy()
-        try: sort = [age for age in AGE_ORDER if age in df['Classe dAge'].unique()]
-        except: sort = sorted(df['Classe dAge'].unique())
+        sort_order = [age for age in AGE_ORDER if age in df['Classe dAge'].unique()]
         
         st.subheader(t['prop_title'])
         agg = df.groupby('Classe dAge')[[dose, 'Population']].sum().reset_index()
@@ -543,155 +454,104 @@ def page_demo(df_age, df_sex, cols, lang):
         melt['L'] = melt['S'].map({'V': t['prop_vaccinated'], 'NV': t['prop_non_vaccinated']})
         melt['P'] = melt['C'] / melt.groupby('Classe dAge')['C'].transform('sum')
         
-        base = alt.Chart(melt).encode(x=alt.X('Classe dAge', sort=sort), y=alt.Y('C', stack="normalize", axis=alt.Axis(format='%')), order=alt.Order('S', sort='descending'))
+        base = alt.Chart(melt).encode(x=alt.X('Classe dAge', sort=sort_order), y=alt.Y('C', stack="normalize", axis=alt.Axis(format='%')), order=alt.Order('S', sort='descending'))
         bars = base.mark_bar().encode(color=alt.Color('L', scale=alt.Scale(range=[color, COLORS['gray_neutral']]), legend=alt.Legend(title="Statut")))
-        text = base.mark_text(dy=10, color=text_color_name).encode(text=alt.Text('P', format='.0%'), opacity=alt.condition(alt.datum.P > 0.05, alt.value(1), alt.value(0)))
-        chart_combined = (bars + text).properties(height=350, background=chart_bg).interactive()
-        if not dark:
-            chart_combined = chart_combined.configure_axis(labelColor='#111111', titleColor='#111111').configure_legend(labelColor='#111111', titleColor='#111111')
-        st.altair_chart(chart_combined, use_container_width=True)
+        text = base.mark_text(dy=10, color=txt_col).encode(text=alt.Text('P', format='.0%'), opacity=alt.condition(alt.datum.P > 0.05, alt.value(1), alt.value(0)))
+        chart_comb = (bars + text).properties(height=350, background=chart_bg).interactive()
+        if not dark: chart_comb = chart_comb.configure_axis(labelColor='#333', titleColor='#333').configure_legend(labelColor='#333', titleColor='#333')
+        st.altair_chart(chart_comb, use_container_width=True)
         
         st.subheader(t['demo_boxplot_title'])
-        st.markdown(f"*{t['demo_boxplot_text']}*")
+        st.caption(t['demo_boxplot_text'])
         nat = df.groupby('Classe dAge')[[dose, 'Population']].sum().reset_index()
         nat['R'] = (nat[dose] / nat['Population'] * 100).clip(upper=100)
         
-        box_base = alt.Chart(df).encode(x=alt.X('Classe dAge', sort=sort))
-        box = box_base.mark_boxplot(extent='min-max', color=color).encode(y=alt.Y(col_taux))
-        tick = alt.Chart(nat).mark_tick(color=COLORS['avg_line'], thickness=3, size=40).encode(x=alt.X('Classe dAge', sort=sort), y='R', tooltip=[alt.Tooltip('R', title=t['tooltip_nat'], format='.1f')])
-        chart_boxplot = (box + tick).properties(background=chart_bg)
-        if not dark:
-            chart_boxplot = chart_boxplot.configure_axis(labelColor='#111111', titleColor='#111111')
-        st.altair_chart(chart_boxplot, use_container_width=True)
-
+        # FIX ALTAIR: properties() appliqué APRÈS l'addition
+        box = alt.Chart(df).mark_boxplot(extent='min-max', color=color).encode(x=alt.X('Classe dAge', sort=sort_order), y=alt.Y(col_taux))
+        tick = alt.Chart(nat).mark_tick(color=COLORS['avg_line'], thickness=3, size=40).encode(x=alt.X('Classe dAge', sort=sort_order), y='R')
+        
+        final_chart = (box + tick).properties(background=chart_bg)
+        if not dark: final_chart = final_chart.configure_axis(labelColor='#333', titleColor='#333')
+        st.altair_chart(final_chart, use_container_width=True)
+        
     elif mode == t['demo_type_sex']:
-        if df_sex is None: st.error("No Data")
+        if df_sex is None: st.error("Données Sexe non disponibles")
         else:
-            st.subheader("Comparaison Sexe")
             nat = df_sex.groupby('Sexe')[[dose, 'Population']].sum().reset_index()
             nat['R'] = (nat[dose] / nat['Population'] * 100).clip(upper=100)
-            
             bar = alt.Chart(nat).mark_bar().encode(
                 x=alt.X('Sexe', title=t['axis_sex']), y=alt.Y('R', title=t['axis_rate']),
-                color=alt.Color('Sexe', scale=alt.Scale(range=[COLORS['male'], COLORS['female']])), tooltip=['Sexe', alt.Tooltip('R', format='.1f')]
+                color=alt.Color('Sexe', scale=alt.Scale(range=[COLORS['male'], COLORS['female']])),
+                tooltip=['Sexe', alt.Tooltip('R', format='.1f')]
             ).properties(height=300, background=chart_bg)
-            if not dark:
-                bar = bar.configure_axis(labelColor='#111111', titleColor='#111111').configure_legend(labelColor='#111111', titleColor='#111111')
             
             c1, c2 = st.columns([1, 2])
             with c1: st.altair_chart(bar, use_container_width=True)
             with c2:
-                st.write("") 
                 st.markdown(f"#### {t['demo_boxplot_title']}")
-                base = alt.Chart(df_sex).encode(x=alt.X('Sexe', title=t['axis_sex']))
-                box = base.mark_boxplot(extent='min-max', color=color).encode(y=alt.Y(col_taux, title=t['axis_rate']), tooltip=alt.value(None)).properties(background=chart_bg)
-                if not dark:
-                    box = box.configure_axis(labelColor='#111111', titleColor='#111111')
                 
-                # Tooltip personnalisé pour le sexe
+                # FIX ALTAIR: properties() appliqué APRÈS l'addition
+                base = alt.Chart(df_sex).encode(x=alt.X('Sexe', title=t['axis_sex']))
+                box = base.mark_boxplot(extent='min-max', color=color).encode(y=alt.Y(col_taux, title=t['axis_rate']))
+                
                 sel = base.mark_bar(opacity=0).encode(
-                    y=alt.Y(col_taux, aggregate='max'), 
-                    y2=alt.value(0),
+                    y=alt.Y(col_taux, aggregate='max'), y2=alt.value(0),
                     tooltip=[
                         alt.Tooltip('Sexe', title=t['axis_sex']),
-                        alt.Tooltip(col_taux, aggregate='max', title=t['tooltip_max'], format='.1f'),
-                        alt.Tooltip(col_taux, aggregate='min', title=t['tooltip_min'], format='.1f'),
-                        alt.Tooltip(col_taux, aggregate='median', title=t['tooltip_med'], format='.1f')
+                        alt.Tooltip(col_taux, aggregate='max', title=t['tooltip_max']),
+                        alt.Tooltip(col_taux, aggregate='min', title=t['tooltip_min']),
+                        alt.Tooltip(col_taux, aggregate='median', title=t['tooltip_med'])
                     ]
                 )
-                st.altair_chart(box + sel, use_container_width=True)
-
+                
+                final_chart = (box + sel).properties(background=chart_bg)
+                if not dark: final_chart = final_chart.configure_axis(labelColor='#333', titleColor='#333')
+                st.altair_chart(final_chart, use_container_width=True)
     st.caption(t['cap_note'])
 
 # ==============================================================================
-# 5. MAIN
+# 6. MAIN
 # ==============================================================================
-
 def main():
+    with st.sidebar:
+        st.markdown("""<style>.sidebar-min-author{font-size:1rem;font-weight:600;color:#3a8ee6;margin-bottom:0.1rem}.sidebar-min-role{font-size:0.92rem;color:#3a8ee6;margin-bottom:0.5rem}.sidebar-min-title{font-size:1.05rem;font-weight:700;color:#3a5fc8;margin-top:0.7rem}.sidebar-min-sep{border-top:1px solid #e0e0e0;margin:0.7rem 0}</style>""", unsafe_allow_html=True)
+        st.header("Paramètres")
+        lang_select = st.radio("Langue", ["Français", "English"], key="lang")
+        dark_mode = st.toggle("Mode Nuit", value=True, key="dark")
+        inject_custom_css(dark_mode)
+        
+        st.markdown("<hr class='sidebar-min-sep'>", unsafe_allow_html=True)
+        st.markdown("<div class='sidebar-min-title'>Navigation</div>", unsafe_allow_html=True)
+        t_temp = TRANSLATIONS[lang_select]
+        menu_options = [t_temp['nav_intro'], t_temp['nav_geo'], t_temp['nav_demo']]
+        page = st.radio("Menu", menu_options, label_visibility="collapsed")
+        
+        st.divider()
+        # AJOUT DES LIENS CLIQUABLES ICI
+        st.markdown(f"""
+        <div class='sidebar-min-author'>
+            Auteur: <a href='https://www.linkedin.com/in/nika-zarubina-b5786593' target='_blank' style='text-decoration: none; color: inherit;'>Nika Zarubina</a>
+        </div>
+        <div class='sidebar-min-role'>
+            {t_temp['prof']}: <a href='https://www.linkedin.com/in/manomathew' target='_blank' style='text-decoration: none; color: inherit;'>Mano J. Mathew</a>
+        </div>
+        """, unsafe_allow_html=True)
+
     data_dep, cols = load_dep_data(FILES['dep_age'])
     data_sex = load_sex_data(FILES['dep_sex'])
-    
     fra = {}
     if data_dep is not None:
         d = data_dep[data_dep['Classe dAge'] == 'Tous âges']
-        dark = st.session_state.get('dark', True)
         fra = {c: d[c].sum() for c in cols if c in d.columns}
-        
+
     if data_dep is None: st.stop()
-
-    if 'lang' not in st.session_state: st.session_state.lang = 'Français'
     t = TRANSLATIONS[st.session_state.lang]
-
-    with st.sidebar:
-        st.markdown("""
-        <style>
-            .sidebar-min-author {
-                font-size: 1rem;
-                font-weight: 600;
-                color: #3a8ee6;
-                margin-bottom: 0.1rem;
-                text-transform: none;
-            }
-            .sidebar-min-author a:hover {
-                text-decoration: underline !important;
-            }
-            .sidebar-min-role {
-                font-size: 0.92rem;
-                color: #3a8ee6;
-                margin-bottom: 0.5rem;
-                text-transform: none;
-            }
-            .sidebar-min-role a:hover {
-                text-decoration: underline !important;
-            }
-            .sidebar-min-title {
-                font-size: 1.05rem;
-                font-weight: 700;
-                color: #3a5fc8;
-                margin-bottom: 0.3rem;
-                margin-top: 0.7rem;
-                text-transform: none;
-            }
-            .sidebar-min-sep {
-                border: none;
-                border-top: 1px solid #e0e0e0;
-                margin: 0.7rem 0 0.7rem 0;
-            }
-            .sidebar-min-settings {
-                font-size: 0.93rem;
-                color: #444;
-                margin-top: 1.2rem;
-                text-transform: none;
-            }
-            .stToggle label {
-                color: #222 !important;
-                font-size: 1rem;
-                font-weight: 500;
-                text-transform: none;
-            }
-        </style>
-        """, unsafe_allow_html=True)
-        # Auteur
-        st.markdown("<div class='sidebar-min-title'>Auteur</div>", unsafe_allow_html=True)
-        st.markdown(f"<div class='sidebar-min-author'><a href='https://www.linkedin.com/in/nika-zarubina-b5786593?utm_source=share&utm_campaign=share_via&utm_content=profile&utm_medium=ios_app' target='_blank' style='text-decoration: none; color: inherit;'>Nika Zarubina</a></div>", unsafe_allow_html=True)
-        st.markdown(f"<div class='sidebar-min-role'>{t['prof']}: <a href='https://www.linkedin.com/in/manomathew?utm_source=share&utm_campaign=share_via&utm_content=profile&utm_medium=ios_app' target='_blank' style='text-decoration: none; color: inherit;'>Mano Joseph Mathew</a></div>", unsafe_allow_html=True)
-        st.markdown("<hr class='sidebar-min-sep'>", unsafe_allow_html=True)
-        # Navigation
-        st.markdown("<div class='sidebar-min-title'>Navigation</div>", unsafe_allow_html=True)
-        page = st.radio("Menu", [t['nav_intro'], t['nav_geo'], t['nav_demo']], label_visibility="collapsed")
-        st.markdown("<hr class='sidebar-min-sep'>", unsafe_allow_html=True)
-        # Paramètres
-        st.markdown("<div class='sidebar-min-title'>Paramètres</div>", unsafe_allow_html=True)
-        st.session_state.lang = st.radio("Langue", ["Français", "English"], label_visibility="collapsed")
-        if 'dark' not in st.session_state:
-            st.session_state['dark'] = True
-        dark = st.checkbox(t['theme_label'], value=st.session_state.get('dark', True))
-        st.session_state['dark'] = dark
-        apply_theme_css(dark)
 
     if page == t['nav_intro']: page_introduction(data_dep, fra, cols, st.session_state.lang)
     elif page == t['nav_geo']: page_geo(data_dep, cols, st.session_state.lang)
     elif page == t['nav_demo']: page_demo(data_dep, data_sex, cols, st.session_state.lang)
 
 if __name__ == "__main__":
+    if 'lang' not in st.session_state: st.session_state.lang = 'Français'
+    if 'dark' not in st.session_state: st.session_state.dark = True
     main()
