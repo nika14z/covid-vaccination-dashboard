@@ -1,5 +1,5 @@
 """Application Streamlit - Tableau de bord Vaccination COVID-19 France.
-Auteur : Nika ZARUBINA
+Auteure : Nika ZARUBINA
 Date : 2023
 Description : Data Storytelling sur la vaccination.
 """
@@ -100,20 +100,21 @@ TRANSLATIONS = {
     'Français': {
         'nav_title': "Navigation",
         'nav_intro': "Synthèse et Contexte",
-            'nav_geo': "Géographie",
-            'nav_demo': "Démographie",
+        'nav_geo': "Géographie",
+        'nav_demo': "Démographie",
         'about': "Auteur",
         'prof': "Encadrant",
-        'kpi_title': "Panorama National (Situation à date)",
-        'intro_title': "Tableau de Bord Vaccination COVID-19",
-        'intro_subtitle': "Analyse comparative de la couverture vaccinale par territoire et démographie",
+        
+        'kpi_title': "Panorama National France (Situation à date)",
+        'intro_title': "Vaccination COVID-19 en France",
+        'intro_subtitle': "Analyse comparative de la couverture vaccinale française par territoire et démographie",
         
         'tab_narrative': "Analyse et Synthèse",
         'tab_data': "Données et Méthodologie",
         'tab_quality': "Qualité",
         'intro_narrative_text': """
         ### Problématique Centrale
-        La campagne de vaccination contre la COVID-19 en France a mobilisé des ressources massives sur tout le territoire.
+        La campagne de vaccination contre la COVID-19 **en France** a mobilisé des ressources massives sur tout le territoire.
         **Cependant, cette couverture a-t-elle été équitable pour tous les Français ?**
 
         ### Structure de l'Analyse
@@ -134,7 +135,7 @@ TRANSLATIONS = {
         'dq_source': "**Source :** Santé Publique France (Fichiers VACSI)",
         'dq_license': "**Licence :** Licence Ouverte / Open Licence version 2.0",
 
-            'geo_title': "Analyse Territoriale",
+        'geo_title': "Analyse Territoriale",
         'geo_desc': "Comparaison de la couverture vaccinale par département.",
         'geo_insight': "**Analyse :** On observe des disparités régionales significatives. Les départements urbains présentent des taux de couverture supérieurs à certains territoires moins denses.",
         'geo_implication': "**Interprétation :** Les zones à faible densité de population présentent des défis logistiques importants pour l'accès à la vaccination.",
@@ -142,7 +143,7 @@ TRANSLATIONS = {
         'geo_map_title': "Carte de France",
         'geo_rank_title': "Classement des départements",
         
-            'demo_title': "Analyse Démographique",
+        'demo_title': "Analyse Démographique",
         'demo_desc': "Couverture vaccinale par groupe d'âge et sexe.",
         'demo_insight_age': "**Analyse Âge :** Les groupes âgés (65+) présentent une couverture élevée (>90%), tandis que la couverture en doses de rappel diminue dans les groupes jeunes adultes.",
         'demo_implication_age': "**Interprétation :** Les stratégies de communication et d'accès doivent être adaptées aux caractéristiques sociodémographiques des différents groupes d'âge.",
@@ -173,13 +174,14 @@ TRANSLATIONS = {
     'English': {
         'nav_title': "Navigation",
         'nav_intro': "Summary & Context",
-            'nav_geo': "Geography",
-            'nav_demo': "Demographics",
+        'nav_geo': "Geography",
+        'nav_demo': "Demographics",
         'about': "Author",
         'prof': "Supervisor",
-        'kpi_title': "National Overview",
-        'intro_title': "COVID-19 Vaccination Dashboard",
-        'intro_subtitle': "Comparative analysis of vaccination coverage by territory and demographics",
+        
+        'kpi_title': "National Overview - France",
+        'intro_title': "COVID-19 Vaccination Dashboard (France)",
+        'intro_subtitle': "Comparative analysis of French vaccination coverage by territory and demographics",
         
         'tab_narrative': "Analysis & Summary",
         'tab_data': "Data & Methods",
@@ -207,7 +209,7 @@ TRANSLATIONS = {
         'dq_source': "**Source:** Public Health France (VACSI files)",
         'dq_license': "**License:** Open License version 2.0",
         
-            'geo_title': "Territorial Analysis",
+        'geo_title': "Territorial Analysis",
         'geo_desc': "Vaccination coverage comparison by department.",
         'geo_insight': "**Analysis:** Significant regional disparities are observed. Urban departments show higher coverage rates than some less densely populated territories.",
         'geo_implication': "**Interpretation:** Low-density population zones face substantial logistical challenges for vaccination access.",
@@ -215,7 +217,7 @@ TRANSLATIONS = {
         'geo_map_title': "Map of France",
         'geo_rank_title': "Ranking by Department",
         
-            'demo_title': "Demographic Analysis",
+        'demo_title': "Demographic Analysis",
         'demo_desc': "Vaccination coverage by age group and gender.",
         'demo_insight_age': "**Age Analysis:** Older age groups (65+) show high coverage (>90%), while booster dose coverage decreases in younger adult cohorts.",
         'demo_implication_age': "**Interpretation:** Communication and access strategies must be adapted to the sociodemographic characteristics of different age groups.",
@@ -324,12 +326,12 @@ def load_sex_data(filepath):
     except: return None
 
 # ==============================================================================
-# 5. Vues (AVEC LE DESIGN ORIGINAL RESTAURÉ)
+# 5. Vues
 # ==============================================================================
 def page_introduction(df_dep, dict_fra, cols, lang):
     t = TRANSLATIONS[lang]
     
-    # RESTAURATION DU CSS SPÉCIFIQUE À LA PAGE D'ACCUEIL
+    # CSS SPÉCIFIQUE
     st.markdown("""
     <style>
         .hero-title {
@@ -358,20 +360,22 @@ def page_introduction(df_dep, dict_fra, cols, lang):
         st.subheader(t['kpi_title'])
         items = list(dict_fra.items())
         
+        # CORRECTION : PLUS DE LIMITE ET PLUS DE COULEURS
         kpi_cols = st.columns(3)
-        colors = ["#667eea", "#764ba2", "#f093fb"]
+        colors = ["#667eea", "#764ba2", "#f093fb", "#2ecc71", "#e67e22", "#e74c3c", "#3498db"]
         
         for idx, (l, v) in enumerate(items):
-            if idx < 3:
-                with kpi_cols[idx]:
-                    if l == "Rappel Biv.": l = "Rappel Bivalent"
-                    color = colors[idx % 3]
-                    st.markdown(f"""
-                    <div style='background: linear-gradient(135deg, {color}20 0%, {color}10 100%);
-                        border-left: 4px solid {color}; padding: 1.5rem; border-radius: 8px; margin-bottom: 1rem;'>
-                        <p style='font-size: 0.9rem; margin: 0; opacity: 0.8;'>{l}</p>
-                        <p style='font-size: 1.8rem; font-weight: 700; color: {color}; margin: 0.5rem 0 0 0;'>{int(v):,}</p>
-                    </div>""", unsafe_allow_html=True)
+            # Boucle infinie sur les colonnes et couleurs
+            with kpi_cols[idx % 3]:
+                if l == "Rappel Biv.": l = "Rappel Bivalent"
+                color = colors[idx % len(colors)]
+                
+                st.markdown(f"""
+                <div style='background: linear-gradient(135deg, {color}20 0%, {color}10 100%);
+                    border-left: 4px solid {color}; padding: 1.5rem; border-radius: 8px; margin-bottom: 1rem;'>
+                    <p style='font-size: 0.9rem; margin: 0; opacity: 0.8;'>{l}</p>
+                    <p style='font-size: 1.8rem; font-weight: 700; color: {color}; margin: 0.5rem 0 0 0;'>{int(v):,}</p>
+                </div>""", unsafe_allow_html=True)
         st.divider()
     
     t1, t2, t3 = st.tabs([t['tab_narrative'], t['tab_data'], t['tab_quality']])
@@ -527,7 +531,6 @@ def main():
         page = st.radio("Menu", menu_options, label_visibility="collapsed")
         
         st.divider()
-        # AJOUT DES LIENS CLIQUABLES ICI
         st.markdown(f"""
         <div class='sidebar-min-author'>
             Auteur: <a href='https://www.linkedin.com/in/nika-zarubina-b5786593' target='_blank' style='text-decoration: none; color: inherit;'>Nika Zarubina</a>
