@@ -1,5 +1,5 @@
 """Application Streamlit - Tableau de bord Vaccination COVID-19 France.
-Auteure : Nika ZARUBINA
+Auteur : Nika ZARUBINA
 Date : 2023
 Description : Data Storytelling sur la vaccination.
 """
@@ -26,40 +26,22 @@ st.set_page_config(
 def inject_custom_css(dark_mode: bool):
     """Injecte le CSS pour le thème et supprime la barre blanche."""
     
-    # Couleurs dynamiques
     bg_color = "#0E1117" if dark_mode else "#FFFFFF"
     text_color = "#FAFAFA" if dark_mode else "#333333"
     card_bg = "rgba(255, 255, 255, 0.05)" if dark_mode else "rgba(0, 0, 0, 0.05)"
     sidebar_bg = "#262730" if dark_mode else "#F8F9FA"
 
-    # CSS Global
     css = f"""
     <style>
-        /* SUPPRESSION BARRE BLANCHE & HEADER */
-        div[data-testid="stDecoration"] {{
-            display: none;
-        }}
-        .block-container {{
-            padding-top: 1rem !important;
-            padding-bottom: 2rem !important;
-            margin-top: 0 !important;
-        }}
-        header[data-testid="stHeader"] {{
-            background-color: transparent !important;
-            z-index: 1;
-        }}
+        div[data-testid="stDecoration"] {{ display: none; }}
+        .block-container {{ padding-top: 1rem !important; padding-bottom: 2rem !important; margin-top: 0 !important; }}
+        header[data-testid="stHeader"] {{ background-color: transparent !important; z-index: 1; }}
 
-        /* THEME GLOBAL */
         .stApp {{ background-color: {bg_color}; color: {text_color}; }}
         section[data-testid="stSidebar"] {{ background-color: {sidebar_bg}; }}
         
-        /* TEXTES */
-        h1, h2, h3, p, li, span, div {{
-            font-family: 'Segoe UI', sans-serif;
-            color: {text_color};
-        }}
+        h1, h2, h3, p, li, span, div {{ font-family: 'Segoe UI', sans-serif; color: {text_color}; }}
         
-        /* SIDEBAR MINI */
         .sidebar-min-author {{ font-size: 1rem; font-weight: 600; color: #3a8ee6 !important; margin-bottom: 0.1rem; }}
         .sidebar-min-role {{ font-size: 0.92rem; color: #3a8ee6 !important; margin-bottom: 0.5rem; }}
         .sidebar-min-title {{ font-size: 1.05rem; font-weight: 700; color: #3a5fc8 !important; margin-top: 0.7rem; }}
@@ -67,7 +49,6 @@ def inject_custom_css(dark_mode: bool):
     </style>
     """
     st.markdown(css, unsafe_allow_html=True)
-    
     if dark_mode: alt.themes.enable("dark")
     else: alt.themes.enable("default")
 
@@ -75,9 +56,12 @@ def inject_custom_css(dark_mode: bool):
 # 3. Constantes & Mapping
 # ============================================================================
 URL_GEOJSON = "https://raw.githubusercontent.com/gregoiredavid/france-geojson/master/departements-version-simplifiee.geojson"
+
+# --- CORRECTION DES CHEMINS ICI ---
+# J'ai ajouté "data/" devant. Si ton dossier est "Data", mets "Data/".
 FILES = {
-    "dep_age": "vacsi-tot-a-dep-2023-07-13-15h50.csv",
-    "dep_sex": "vacsi-tot-s-dep-2023-07-13-15h51.csv",
+    "dep_age": "data/vacsi-tot-a-dep-2023-07-13-15h50.csv",
+    "dep_sex": "data/vacsi-tot-s-dep-2023-07-13-15h51.csv",
 }
 
 COLORS = {
@@ -256,9 +240,11 @@ def fix_dep_code(c: any) -> str:
 
 @st.cache_data
 def load_dep_data(filepath):
+    # Debug pour afficher le chemin si erreur
     if not os.path.exists(filepath):
-        st.error(f"Fichier introuvable: {filepath}")
+        st.error(f"Fichier introuvable : `{filepath}`. Le dossier 'data' est-il bien sur GitHub ?")
         return None, []
+        
     try:
         data = pd.read_csv(filepath, delimiter=';', dtype={'dep': str})
         data.columns = data.columns.str.lower()
@@ -282,7 +268,6 @@ def load_dep_data(filepath):
         data['Departement'] = data['Departement'].apply(fix_dep_code)
         data['Population'] = data['Population'].replace(0, np.nan)
         
-        # MAPPING CORRIGÉ
         data['CodeAge'] = pd.to_numeric(data['CodeAge'], errors='coerce').fillna(-1).astype(int)
         data['Classe dAge'] = data['CodeAge'].map(AGE_MAPPING)
         data = data.dropna(subset=['Classe dAge'])
@@ -330,28 +315,6 @@ def load_sex_data(filepath):
 # ==============================================================================
 def page_introduction(df_dep, dict_fra, cols, lang):
     t = TRANSLATIONS[lang]
-    
-    # CSS SPÉCIFIQUE
-    st.markdown("""
-    <style>
-        .hero-title {
-            font-size: 2.5rem;
-            font-weight: 700;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-            margin-bottom: 0.5rem;
-        }
-        .hero-subtitle {
-            font-size: 1.1rem;
-            color: #888888;
-            font-style: italic;
-            margin-bottom: 2rem;
-        }
-    </style>
-    """, unsafe_allow_html=True)
-
     st.markdown(f"<h1 class='hero-title'>{t['intro_title']}</h1>", unsafe_allow_html=True)
     st.markdown(f"<p class='hero-subtitle'>{t['intro_subtitle']}</p>", unsafe_allow_html=True)
     
@@ -360,16 +323,14 @@ def page_introduction(df_dep, dict_fra, cols, lang):
         st.subheader(t['kpi_title'])
         items = list(dict_fra.items())
         
-        # CORRECTION : PLUS DE LIMITE ET PLUS DE COULEURS
+        # CORRECTIF BUG 1: kpi_cols au lieu de cols
         kpi_cols = st.columns(3)
-        colors = ["#667eea", "#764ba2", "#f093fb", "#2ecc71", "#e67e22", "#e74c3c", "#3498db"]
+        colors_list = ["#667eea", "#764ba2", "#f093fb", "#2ecc71", "#e67e22", "#e74c3c", "#3498db"]
         
         for idx, (l, v) in enumerate(items):
-            # Boucle infinie sur les colonnes et couleurs
             with kpi_cols[idx % 3]:
                 if l == "Rappel Biv.": l = "Rappel Bivalent"
-                color = colors[idx % len(colors)]
-                
+                color = colors_list[idx % len(colors_list)]
                 st.markdown(f"""
                 <div style='background: linear-gradient(135deg, {color}20 0%, {color}10 100%);
                     border-left: 4px solid {color}; padding: 1.5rem; border-radius: 8px; margin-bottom: 1rem;'>
@@ -382,6 +343,7 @@ def page_introduction(df_dep, dict_fra, cols, lang):
     with t1: st.markdown(t['intro_narrative_text'])
     with t2:
         st.info(t['intro_data_text'])
+        # cols est bien la liste ici
         st.markdown(f"**Variables:** {', '.join(cols)}")
     with t3: st.warning(t['dq_limitations']); st.markdown(t['dq_source']); st.markdown(t['dq_license'])
 
@@ -470,7 +432,7 @@ def page_demo(df_age, df_sex, cols, lang):
         nat = df.groupby('Classe dAge')[[dose, 'Population']].sum().reset_index()
         nat['R'] = (nat[dose] / nat['Population'] * 100).clip(upper=100)
         
-        # FIX ALTAIR: properties() appliqué APRÈS l'addition
+        # CORRECTIF BUG 2: ALTAIR (background à la fin)
         box = alt.Chart(df).mark_boxplot(extent='min-max', color=color).encode(x=alt.X('Classe dAge', sort=sort_order), y=alt.Y(col_taux))
         tick = alt.Chart(nat).mark_tick(color=COLORS['avg_line'], thickness=3, size=40).encode(x=alt.X('Classe dAge', sort=sort_order), y='R')
         
@@ -494,7 +456,7 @@ def page_demo(df_age, df_sex, cols, lang):
             with c2:
                 st.markdown(f"#### {t['demo_boxplot_title']}")
                 
-                # FIX ALTAIR: properties() appliqué APRÈS l'addition
+                # CORRECTIF BUG 2: ALTAIR
                 base = alt.Chart(df_sex).encode(x=alt.X('Sexe', title=t['axis_sex']))
                 box = base.mark_boxplot(extent='min-max', color=color).encode(y=alt.Y(col_taux, title=t['axis_rate']))
                 
