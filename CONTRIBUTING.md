@@ -21,10 +21,10 @@ Les contributions sont les bienvenues ! Voici comment vous pouvez aider :
 
 ### Types de contributions
 
-- 🐛 **Corrections de bugs** : Signaler un bug ou proposer une correction
-- ✨ **Nouvelles fonctionnalités** : Améliorer les visualisations ou ajouter de nouveaux graphiques
-- 📝 **Documentation** : Améliorer le README ou les commentaires du code
-- 🎨 **Optimisations** : Améliorer les performances ou l'accessibilité
+- **Corrections de bugs** : Signaler un bug ou proposer une correction
+- **Nouvelles fonctionnalités** : Améliorer les visualisations ou ajouter de nouveaux graphiques
+- **Documentation** : Améliorer le README ou les commentaires du code
+- **Optimisations** : Améliorer les performances ou l'accessibilité
 
 ---
 
@@ -49,7 +49,7 @@ Contributions are welcome! Here's how you can help:
 
 ### Types of Contributions
 
-- 🐛 **Bug Fixes** : Report a bug or propose a fix
-- ✨ **New Features** : Improve visualizations or add new charts
-- 📝 **Documentation** : Improve README or code comments
-- 🎨 **Optimizations** : Improve performance or accessibility
+- **Bug Fixes** : Report a bug or propose a fix
+- **New Features** : Improve visualizations or add new charts
+- **Documentation** : Improve README or code comments
+- **Optimizations** : Improve performance or accessibility
